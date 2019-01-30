@@ -26,17 +26,16 @@ type Command struct {
 // Server is the mock server used for handling the connections
 type Server struct {
 	listener net.Listener
-	lock     sync.RWMutex
 
 	expectList         []*Command
 	unexpectedCommands [][]string
 }
 
 // NewServer makes a server listening on addr. Close with .Close().
-func NewServer(ctx context.Context, addr string) (*Server, error) {
+func NewServer(ctx context.Context) (*Server, error) {
 	s := Server{}
 	lc := net.ListenConfig{}
-	l, err := lc.Listen(ctx, "tcp", addr)
+	l, err := lc.Listen(ctx, "tcp", "")
 	if err != nil {
 		return nil, err
 	}
@@ -98,26 +97,7 @@ func (s *Server) ServeConn(conn net.Conn) {
 
 // Addr has the net.Addr struct
 func (s *Server) Addr() *net.TCPAddr {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if s.listener == nil {
-		return nil
-	}
 	return s.listener.Addr().(*net.TCPAddr)
-}
-
-// Close closes all connections
-func (s *Server) Close() error {
-	s.lock.Lock()
-	if s.listener != nil {
-		if err := s.listener.Close(); err != nil {
-			return err
-		}
-	}
-	s.listener = nil
-	s.lock.Unlock()
-	return nil
 }
 
 // ExpectationsWereMet return nil if the all expects match or error if not
