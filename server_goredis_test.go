@@ -61,3 +61,22 @@ func TestGoRedisExtraCall(t *testing.T) {
 
 	require.Error(t, s.ExpectationsWereMet())
 }
+
+func TestGoRedisPing(t *testing.T) {
+	ctx, cnl := context.WithCancel(context.Background())
+	defer cnl()
+
+	s, err := NewServer(ctx, "")
+	require.NoError(t, err)
+
+	s.ExpectPing().Times(3)
+
+	cl := redis.NewClient(&redis.Options{
+		Addr: s.Addr().String(),
+	})
+
+	//  this library does not support Ping argument
+	st, e := cl.Ping().Result()
+	require.NoError(t, e)
+	require.Equal(t, "PONG", st)
+}

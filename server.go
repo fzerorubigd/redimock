@@ -12,12 +12,12 @@ import (
 
 // Command is a single
 type Command struct {
-	command   string
-	args      []string
-	responses []interface{}
-	count     int
-	terminate bool
-	delay     time.Duration
+	command    string
+	argCompare func(...string) bool
+	responses  []interface{}
+	count      int
+	terminate  bool
+	delay      time.Duration
 
 	lock   sync.Mutex
 	called int
@@ -72,6 +72,7 @@ func (s *Server) ServeConn(conn net.Conn) {
 		if err != nil {
 			panic(err)
 		}
+
 		var cmd *Command
 		for i := range s.expectList {
 			if s.expectList[i].compare(args) {
@@ -79,6 +80,7 @@ func (s *Server) ServeConn(conn net.Conn) {
 				cmd.increase()
 			}
 		}
+
 		if cmd == nil {
 			// Return error *and continue?*
 			if err := writeError(conn, ""); err != nil {
@@ -93,11 +95,12 @@ func (s *Server) ServeConn(conn net.Conn) {
 		if cmd.delay > 0 {
 			time.Sleep(cmd.delay)
 		}
+
 		rsp := cmd.responses
 		if len(rsp) == 1 {
 			fn, ok := rsp[0].(Result)
 			if ok {
-				rsp = fn(cmd.args...)
+				rsp = fn(args[1:]...)
 			}
 		}
 
@@ -149,10 +152,37 @@ func (s *Server) ExpectationsWereMet() error {
 func (s *Server) Expect(command string, args ...string) *Command {
 	c := &Command{
 		command: strings.ToUpper(command),
-		args:    args,
+	}
+	c.argCompare = func(s ...string) bool {
+		if len(s) != len(args) {
+			return false
+		}
+
+		for i := range s {
+			if s[i] != args[i] {
+				return false
+			}
+		}
+		return true
 	}
 	s.expectList = append(s.expectList, c)
 
+	return c
+}
+
+// ExpectWithAnyArg is like expect but accept any argument
+func (s *Server) ExpectWithAnyArg(command string) *Command {
+	c := s.Expect(command)
+	c.argCompare = func(...string) bool {
+		return true
+	}
+	return c
+}
+
+// ExpectWithFn is the custom except with function
+func (s *Server) ExpectWithFn(command string, fn func(...string) bool) *Command {
+	c := s.Expect(command)
+	c.argCompare = fn
 	return c
 }
 
@@ -190,20 +220,19 @@ func (c *Command) CloseConnection() *Command {
 }
 
 func (c *Command) compare(input []string) bool {
-	if len(input) != len(c.args)+1 {
+	if len(input) < 1 {
 		return false
 	}
+
 	if strings.ToUpper(input[0]) != c.command {
 		return false
 	}
 
-	for i := range c.args {
-		if c.args[i] != input[i+1] {
-			return false
-		}
+	if c.argCompare != nil {
+		return c.argCompare(input[1:]...)
 	}
 
-	return true
+	return false
 }
 
 func (c *Command) error() error {
@@ -212,9 +241,8 @@ func (c *Command) error() error {
 	}
 
 	return fmt.Errorf(
-		`command "%s %s" expected %d time called %d times`,
+		`command "%s" expected %d time called %d times`,
 		c.command,
-		strings.Join(c.args, " "),
 		c.count,
 		c.called,
 	)

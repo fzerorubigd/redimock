@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -18,8 +19,8 @@ func (s *Server) ExpectGet(key string, exists bool, result string) *Command {
 // ExpectSet return a redis set command. success could be false only for NX or XX option,
 // otherwise it dose not make sense
 func (s *Server) ExpectSet(key string, value string, success bool, extra ...string) *Command {
-	c := s.Expect("SET", key, value)
-	c.args = append(c.args, extra...)
+	args := append([]string{key, value}, extra...)
+	c := s.Expect("SET", args...)
 	if success {
 		return c.WillReturn("OK")
 	}
@@ -32,4 +33,18 @@ func (s *Server) ExpectSet(key string, value string, success bool, extra ...stri
 		}
 		return []interface{}{"OK"}
 	})
+}
+
+// ExpectPing is the ping command
+func (s *Server) ExpectPing() *Command {
+	c := s.Expect("PING").WillReturn(func(args ...string) []interface{} {
+		fmt.Println(args)
+		if len(args) == 0 {
+			return []interface{}{"PONG"}
+		} else if len(args) == 1 {
+			return []interface{}{args[0]}
+		}
+		return []interface{}{Error("ERR wrong number of arguments for 'ping' command")}
+	})
+	return c
 }
