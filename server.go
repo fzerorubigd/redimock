@@ -23,16 +23,20 @@ type Command struct {
 	called int
 }
 
+// Result is the function that can be used for advanced result value
+type Result = func(...string) []interface{}
+
 // Server is the mock server used for handling the connections
 type Server struct {
 	listener net.Listener
 
 	expectList         []*Command
+	lock               sync.RWMutex
 	unexpectedCommands [][]string
 }
 
 // NewServer makes a server listening on addr. Close with .Close().
-func NewServer(ctx context.Context,addr string) (*Server, error) {
+func NewServer(ctx context.Context, addr string) (*Server, error) {
 	s := Server{}
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -80,14 +84,24 @@ func (s *Server) ServeConn(conn net.Conn) {
 			if err := writeError(conn, ""); err != nil {
 				panic(err)
 			}
+			s.lock.Lock()
 			s.unexpectedCommands = append(s.unexpectedCommands, args)
+			s.lock.Unlock()
 			continue
 		}
 
 		if cmd.delay > 0 {
 			time.Sleep(cmd.delay)
 		}
-		if err := write(conn, cmd.responses...); err != nil {
+		rsp := cmd.responses
+		if len(rsp) == 1 {
+			fn, ok := rsp[0].(Result)
+			if ok {
+				rsp = fn(cmd.args...)
+			}
+		}
+
+		if err := write(conn, rsp...); err != nil {
 			panic(err)
 		}
 
@@ -111,12 +125,14 @@ func (s *Server) ExpectationsWereMet() error {
 		}
 	}
 
+	s.lock.RLock()
 	for i := range s.unexpectedCommands {
 		all = append(all, fmt.Errorf(
 			"command %s is called but not expected",
 			strings.Join(s.unexpectedCommands[i], " ")),
 		)
 	}
+	s.lock.RUnlock()
 
 	var str string
 	if len(all) > 0 {
