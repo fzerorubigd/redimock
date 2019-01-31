@@ -1,7 +1,5 @@
 language: go
 go:
-  - 1.7
-  - 1.8
   - 1.9
   - "1.10"
   - 1.11
@@ -14,6 +12,5 @@ script:
   - goveralls -v -race -service=travis-ci -repotoken=$COVERALLS_TOKEN || go test -race -v
 matrix:
   allow_failures:
-    - go: 1.7
     - go: tip
 

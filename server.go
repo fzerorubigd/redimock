@@ -32,16 +32,18 @@ type Server struct {
 }
 
 // NewServer makes a server listening on addr. Close with .Close().
-func NewServer(ctx context.Context) (*Server, error) {
+func NewServer(ctx context.Context,addr string) (*Server, error) {
 	s := Server{}
-	lc := net.ListenConfig{}
-	l, err := lc.Listen(ctx, "tcp", "")
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 	s.listener = l
 	go s.serve()
-
+	go func() {
+		<-ctx.Done()
+		_ = l.Close()
+	}()
 	return &s, nil
 }
 
