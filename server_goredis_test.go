@@ -99,3 +99,21 @@ func TestGoRedisList(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, v, ret)
 }
+
+func TestGoRedisListHSet(t *testing.T) {
+	ctx, cnl := context.WithCancel(context.Background())
+	defer cnl()
+
+	s, err := NewServer(ctx, "")
+	require.NoError(t, err)
+
+	s.ExpectHSet("mykey", "fld", "value", true)
+
+	cl := redis.NewClient(&redis.Options{
+		Addr: s.Addr().String(),
+	})
+
+	ret, err := cl.HSet("mykey", "fld", "value").Result()
+	require.NoError(t, err)
+	require.False(t, ret)
+}

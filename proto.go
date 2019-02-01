@@ -2,13 +2,6 @@ package server
 
 import (
 	"bufio"
-)
-
-/*
-	This file is based on `https://github.com/alicebob/miniredis/blob/master/server/proto.go`
-*/
-
-import (
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +10,10 @@ import (
 	"strings"
 	"unicode"
 )
+
+/*
+	This file is based on `https://github.com/alicebob/miniredis/blob/master/server/proto.go`
+*/
 
 // ErrProtocol is the general error for unexpected input
 var ErrProtocol = errors.New("invalid request")

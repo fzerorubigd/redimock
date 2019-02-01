@@ -36,7 +36,7 @@ func (s *Server) ExpectSet(key string, value string, success bool, extra ...stri
 
 // ExpectPing is the ping command
 func (s *Server) ExpectPing() *Command {
-	c := s.Expect("PING").WithAnyArgs().WillReturn(func(args ...string) []interface{} {
+	return s.Expect("PING").WithAnyArgs().WillReturn(func(args ...string) []interface{} {
 		if len(args) == 0 {
 			return []interface{}{"PONG"}
 		} else if len(args) == 1 {
@@ -44,7 +44,16 @@ func (s *Server) ExpectPing() *Command {
 		}
 		return []interface{}{Error("ERR wrong number of arguments for 'ping' command")}
 	})
-	return c
+}
+
+// ExpectHSet is the command HSET, if the update is true, then it means the key
+// was there already
+func (s *Server) ExpectHSet(key, field, value string, update bool) *Command {
+	ret := 1
+	if update {
+		ret = 0
+	}
+	return s.Expect("HSET").WithArgs(key, field, value).WillReturn(ret)
 }
 
 // ExpectHGetAll return the HGETALL command
