@@ -69,7 +69,7 @@ func TestGoRedisPing(t *testing.T) {
 	s, err := NewServer(ctx, "")
 	require.NoError(t, err)
 
-	s.ExpectPing().Times(3)
+	s.ExpectPing().Times(1)
 
 	cl := redis.NewClient(&redis.Options{
 		Addr: s.Addr().String(),
@@ -79,6 +79,8 @@ func TestGoRedisPing(t *testing.T) {
 	st, e := cl.Ping().Result()
 	require.NoError(t, e)
 	require.Equal(t, "PONG", st)
+
+	require.NoError(t, s.ExpectationsWereMet())
 }
 
 func TestGoRedisList(t *testing.T) {
@@ -89,7 +91,7 @@ func TestGoRedisList(t *testing.T) {
 	require.NoError(t, err)
 
 	v := map[string]string{"v1": "v2", "v3": "v4"}
-	s.ExpectHGetAll("mykey", v)
+	s.ExpectHGetAll("mykey", v).Once()
 
 	cl := redis.NewClient(&redis.Options{
 		Addr: s.Addr().String(),
@@ -98,6 +100,8 @@ func TestGoRedisList(t *testing.T) {
 	ret, err := cl.HGetAll("mykey").Result()
 	require.NoError(t, err)
 	require.Equal(t, v, ret)
+
+	require.NoError(t, s.ExpectationsWereMet())
 }
 
 func TestGoRedisListHSet(t *testing.T) {
@@ -107,7 +111,7 @@ func TestGoRedisListHSet(t *testing.T) {
 	s, err := NewServer(ctx, "")
 	require.NoError(t, err)
 
-	s.ExpectHSet("mykey", "fld", "value", true)
+	s.ExpectHSet("mykey", "fld", "value", true).Once()
 
 	cl := redis.NewClient(&redis.Options{
 		Addr: s.Addr().String(),
@@ -116,4 +120,6 @@ func TestGoRedisListHSet(t *testing.T) {
 	ret, err := cl.HSet("mykey", "fld", "value").Result()
 	require.NoError(t, err)
 	require.False(t, ret)
+
+	require.NoError(t, s.ExpectationsWereMet())
 }

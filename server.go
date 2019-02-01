@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -56,12 +57,12 @@ func (s *Server) serve() {
 		if err != nil {
 			return
 		}
-		go s.ServeConn(conn)
+		go s.serveConn(conn)
 	}
 }
 
-// ServeConn handles a net.Conn. Nice with net.Pipe()
-func (s *Server) ServeConn(conn net.Conn) {
+// ServeConn handles a connection
+func (s *Server) serveConn(conn io.ReadWriteCloser) {
 	defer func() {
 		_ = conn.Close()
 	}()
@@ -240,7 +241,7 @@ func (c *Command) compare(input []string) bool {
 		return c.argCompare(input[1:]...)
 	}
 
-	return false
+	return len(input) == 1
 }
 
 func (c *Command) error() error {

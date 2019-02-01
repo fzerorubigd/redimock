@@ -6,6 +6,11 @@ import (
 
 // TODO : I don't want to fall in `implement another redis` trap. so be careful :)
 
+// ExpectQuit try to return quit command
+func (s *Server) ExpectQuit() *Command  {
+	return s.Expect("Quit").CloseConnection().WillReturn("OK")
+}
+
 // ExpectGet return a redis GET command
 func (s *Server) ExpectGet(key string, exists bool, result string) *Command {
 	c := s.Expect("GET").WithArgs(key)
