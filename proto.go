@@ -42,7 +42,7 @@ func readArray(r io.Reader) ([]string, error) {
 	case '*':
 		l, err := strconv.Atoi(line[1 : len(line)-2])
 		if err != nil {
-			return nil, err
+			return nil, ErrProtocol
 		}
 		// l can be -1
 		var fields []string
@@ -79,7 +79,7 @@ func readString(rd *bufio.Reader) (string, error) {
 		// bulk strings are: `$5\r\nhello\r\n`
 		length, err := strconv.Atoi(line[1 : len(line)-2])
 		if err != nil {
-			return "", err
+			return "", ErrProtocol
 		}
 		if length < 0 {
 			// -1 is a nil response
@@ -103,10 +103,7 @@ func readString(rd *bufio.Reader) (string, error) {
 func writeF(w io.Writer, s string, args ...interface{}) error {
 	str := fmt.Sprintf(s, args...)
 	_, err := fmt.Fprintf(w, str)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // writeError try to write a redis error to output
@@ -168,35 +165,30 @@ func tryWriteArray(w io.Writer, t interface{}) error {
 	return write(w, args...)
 }
 
+func writeSingle(w io.Writer, arg interface{}) error {
+	// first the easy way, no reflection
+	switch t := arg.(type) {
+	case Error:
+		// TODO : make sure its a one-liner
+		return writeError(w, t)
+	case BulkString:
+		return writeBulkString(w, t)
+	case int:
+		return writeInt(w, t)
+	case string:
+		return writeSimpleString(w, t)
+	case nil:
+		return writeNull(w)
+	default:
+		return tryWriteArray(w, t)
+	}
+
+}
+
 func write(w io.Writer, args ...interface{}) error {
 	for i := range args {
-		// first the easy way, no reflection
-		switch t := args[i].(type) {
-		case Error:
-			// TODO : make sure its a one-liner
-			if err := writeError(w, t); err != nil {
-				return err
-			}
-		case BulkString:
-			if err := writeBulkString(w, t); err != nil {
-				return err
-			}
-		case int:
-			if err := writeInt(w, t); err != nil {
-				return err
-			}
-		case string:
-			if err := writeSimpleString(w, t); err != nil {
-				return err
-			}
-		case nil:
-			if err := writeNull(w); err != nil {
-				return err
-			}
-		default:
-			if err := tryWriteArray(w, t); err != nil {
-				return err
-			}
+		if err := writeSingle(w, args[i]); err != nil {
+			return err
 		}
 	}
 

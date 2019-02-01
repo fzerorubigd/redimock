@@ -5,9 +5,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReadArray(t *testing.T) {
@@ -16,7 +17,7 @@ func TestReadArray(t *testing.T) {
 		err     error
 		res     []string
 	}
-	for i, c := range []cas{
+	for _, c := range []cas{
 		{
 			payload: "*1\r\n$4\r\nPING\r\n",
 			res:     []string{"PING"},
@@ -39,15 +40,22 @@ func TestReadArray(t *testing.T) {
 		{
 			payload: "*-1\r\n", // not sure this is legal in a request
 		},
+		{
+			payload: "\r\n",
+			err:     ErrProtocol,
+		},
+		{
+			payload: "*NO\r\n",
+			err:     ErrProtocol,
+		},
+		{
+			payload: "&10\r\n",
+			err:     ErrProtocol,
+		},
 	} {
 		res, err := readArray(bytes.NewBufferString(c.payload))
-		if have, want := err, c.err; have != want {
-			t.Errorf("err %d: have %v, want %v", i, have, want)
-			continue
-		}
-		if have, want := res, c.res; !reflect.DeepEqual(have, want) {
-			t.Errorf("case %d: have %v, want %v", i, have, want)
-		}
+		assert.Equal(t, err, c.err)
+		assert.Equal(t, res, c.res)
 	}
 }
 
@@ -58,7 +66,7 @@ func TestReadString(t *testing.T) {
 		res     string
 	}
 	bigPayload := strings.Repeat("X", 1<<24)
-	for i, c := range []cas{
+	for _, c := range []cas{
 		{
 			payload: "+hello world\r\n",
 			res:     "hello world",
@@ -108,14 +116,33 @@ func TestReadString(t *testing.T) {
 			payload: "XXXX\r\n",
 			err:     ErrProtocol,
 		},
+		{
+			payload: "$HI\r\n",
+			err:     ErrProtocol,
+		},
+		{
+			payload: "$-1\r\n",
+			res:     "",
+		},
+		{
+			payload: "$100\r\nNO\r\n",
+			err:     io.EOF,
+		},
 	} {
 		res, err := readString(bufio.NewReader(bytes.NewBufferString(c.payload)))
-		if have, want := err, c.err; have != want {
-			t.Errorf("err %d: have %v, want %v", i, have, want)
-			continue
-		}
-		if have, want := res, c.res; !reflect.DeepEqual(have, want) {
-			t.Errorf("case %d: have %#v, want %#v", i, have, want)
-		}
+		assert.Equal(t, err, c.err)
+		assert.Equal(t, res, c.res)
 	}
+}
+
+type failWriter int
+
+func (failWriter) Write(p []byte) (n int, err error) {
+	return 0, io.EOF
+}
+
+func TestProtoWrite(t *testing.T) {
+	w := &bytes.Buffer{}
+	assert.Error(t, write(w, map[string]string{}))
+	assert.Error(t, write(failWriter(0), []int{1, 2, 3}))
 }
