@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"net"
@@ -66,9 +65,8 @@ func (s *Server) ServeConn(conn net.Conn) {
 	defer func() {
 		_ = conn.Close()
 	}()
-	r := bufio.NewReader(conn)
 	for {
-		args, err := readArray(r)
+		args, err := readArray(conn)
 		if err != nil {
 			panic(err)
 		}
@@ -83,7 +81,7 @@ func (s *Server) ServeConn(conn net.Conn) {
 
 		if cmd == nil {
 			// Return error *and continue?*
-			if err := writeError(conn, ""); err != nil {
+			if err := write(conn, Error("command not expected")); err != nil {
 				panic(err)
 			}
 			s.lock.Lock()
@@ -103,7 +101,6 @@ func (s *Server) ServeConn(conn net.Conn) {
 				rsp = fn(args[1:]...)
 			}
 		}
-
 		if err := write(conn, rsp...); err != nil {
 			panic(err)
 		}
@@ -149,11 +146,18 @@ func (s *Server) ExpectationsWereMet() error {
 }
 
 // Expect return a command
-func (s *Server) Expect(command string, args ...string) *Command {
+func (s *Server) Expect(command string) *Command {
 	c := &Command{
 		command: strings.ToUpper(command),
 	}
-	c.argCompare = func(s ...string) bool {
+
+	s.expectList = append(s.expectList, c)
+	return c
+}
+
+// WithArgs add array as arguments
+func (c *Command) WithArgs(args ...string) *Command {
+	return c.WithFnArgs(func(s ...string) bool {
 		if len(s) != len(args) {
 			return false
 		}
@@ -164,25 +168,20 @@ func (s *Server) Expect(command string, args ...string) *Command {
 			}
 		}
 		return true
-	}
-	s.expectList = append(s.expectList, c)
-
-	return c
+	})
 }
 
-// ExpectWithAnyArg is like expect but accept any argument
-func (s *Server) ExpectWithAnyArg(command string) *Command {
-	c := s.Expect(command)
-	c.argCompare = func(...string) bool {
+// WithAnyArgs if any argument is ok
+func (c *Command) WithAnyArgs() *Command {
+	return c.WithFnArgs(func(...string) bool {
 		return true
-	}
-	return c
+	})
 }
 
-// ExpectWithFn is the custom except with function
-func (s *Server) ExpectWithFn(command string, fn func(...string) bool) *Command {
-	c := s.Expect(command)
-	c.argCompare = fn
+// WithFnArgs is advanced function compare for arguments
+func (c *Command) WithFnArgs(f func(...string) bool) *Command {
+	// TODO : may be panic() if the function already set
+	c.argCompare = f
 	return c
 }
 
@@ -193,6 +192,12 @@ func (c *Command) WillReturn(ret ...interface{}) *Command {
 	return c
 }
 
+// WillReturnFn is a helper function for advance return value
+func (c *Command) WillReturnFn(r Result) *Command {
+	return c.WillReturn(r)
+}
+
+// WithDelay return command with delay
 func (c *Command) WithDelay(d time.Duration) *Command {
 	c.delay = d
 	return c
@@ -204,16 +209,19 @@ func (c *Command) Once() *Command {
 	return c
 }
 
+// Any means this can be called 0 to n time
 func (c *Command) Any() *Command {
 	c.count = -1
 	return c
 }
 
+// Times this should be called n times
 func (c *Command) Times(n int) *Command {
 	c.count = n
 	return c
 }
 
+// CloseConnection should close connection after this command
 func (c *Command) CloseConnection() *Command {
 	c.terminate = true
 	return c

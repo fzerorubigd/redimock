@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -9,7 +8,7 @@ import (
 
 // ExpectGet return a redis GET command
 func (s *Server) ExpectGet(key string, exists bool, result string) *Command {
-	c := s.Expect("GET", key)
+	c := s.Expect("GET").WithArgs(key)
 	if exists {
 		return c.WillReturn(BulkString(result))
 	}
@@ -20,7 +19,7 @@ func (s *Server) ExpectGet(key string, exists bool, result string) *Command {
 // otherwise it dose not make sense
 func (s *Server) ExpectSet(key string, value string, success bool, extra ...string) *Command {
 	args := append([]string{key, value}, extra...)
-	c := s.Expect("SET", args...)
+	c := s.Expect("SET").WithArgs(args...)
 	if success {
 		return c.WillReturn("OK")
 	}
@@ -37,8 +36,7 @@ func (s *Server) ExpectSet(key string, value string, success bool, extra ...stri
 
 // ExpectPing is the ping command
 func (s *Server) ExpectPing() *Command {
-	c := s.Expect("PING").WillReturn(func(args ...string) []interface{} {
-		fmt.Println(args)
+	c := s.Expect("PING").WithAnyArgs().WillReturn(func(args ...string) []interface{} {
 		if len(args) == 0 {
 			return []interface{}{"PONG"}
 		} else if len(args) == 1 {
@@ -47,4 +45,13 @@ func (s *Server) ExpectPing() *Command {
 		return []interface{}{Error("ERR wrong number of arguments for 'ping' command")}
 	})
 	return c
+}
+
+// ExpectHGetAll return the HGETALL command
+func (s *Server) ExpectHGetAll(key string, ret map[string]string) *Command {
+	arr := make([]BulkString, 0, len(ret)*2)
+	for i := range ret {
+		arr = append(arr, BulkString(i), BulkString(ret[i]))
+	}
+	return s.Expect("HGETALL").WithArgs(key).WillReturn(arr)
 }

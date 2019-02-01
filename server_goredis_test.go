@@ -80,3 +80,22 @@ func TestGoRedisPing(t *testing.T) {
 	require.NoError(t, e)
 	require.Equal(t, "PONG", st)
 }
+
+func TestGoRedisList(t *testing.T) {
+	ctx, cnl := context.WithCancel(context.Background())
+	defer cnl()
+
+	s, err := NewServer(ctx, "")
+	require.NoError(t, err)
+
+	v := map[string]string{"v1": "v2", "v3": "v4"}
+	s.ExpectHGetAll("mykey", v)
+
+	cl := redis.NewClient(&redis.Options{
+		Addr: s.Addr().String(),
+	})
+
+	ret, err := cl.HGetAll("mykey").Result()
+	require.NoError(t, err)
+	require.Equal(t, v, ret)
+}

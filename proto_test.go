@@ -40,7 +40,7 @@ func TestReadArray(t *testing.T) {
 			payload: "*-1\r\n", // not sure this is legal in a request
 		},
 	} {
-		res, err := readArray(bufio.NewReader(bytes.NewBufferString(c.payload)))
+		res, err := readArray(bytes.NewBufferString(c.payload))
 		if have, want := err, c.err; have != want {
 			t.Errorf("err %d: have %v, want %v", i, have, want)
 			continue

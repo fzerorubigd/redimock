@@ -29,7 +29,8 @@ type (
 )
 
 // client always sends arrays with bulk strings
-func readArray(rd *bufio.Reader) ([]string, error) {
+func readArray(r io.Reader) ([]string, error) {
+	rd := bufio.NewReader(r)
 	line, err := rd.ReadString('\n')
 	if err != nil {
 		return nil, err
@@ -152,7 +153,7 @@ func toInline(s string) string {
 
 func tryWriteArray(w io.Writer, t interface{}) error {
 	// Now nasty reflection
-	v := reflect.ValueOf(&t).Elem()
+	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Slice {
 		return fmt.Errorf("invalid type: %T", t)
 	}
