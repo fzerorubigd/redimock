@@ -139,6 +139,7 @@ func TestRedigoLPush(t *testing.T) {
 
 	s.ExpectLPush(2, "LIST", "KEY1", "KEY2").Once()
 	s.ExpectLPush(5, "LIST").Once()
+	s.ExpectRPush(6, "LIST").Once()
 
 	red, err := redis.Dial("tcp", s.Addr().String())
 	require.NoError(t, err)
@@ -150,6 +151,10 @@ func TestRedigoLPush(t *testing.T) {
 	ret, err = redis.Int(red.Do("lpush", "LIST", "HI", "HOY", "BOY"))
 	require.NoError(t, err)
 	require.Equal(t, 5, ret)
+
+	ret, err = redis.Int(red.Do("rpush", "LIST", "R"))
+	require.NoError(t, err)
+	require.Equal(t, 6, ret)
 
 	require.NoError(t, s.ExpectationsWereMet())
 

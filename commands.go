@@ -78,9 +78,9 @@ func (s *Server) ExpectHGetAll(key string, ret map[string]string) *Command {
 
 // == List Commands == //
 
-// ExpectLPush is helper for lpush command
-func (s *Server) ExpectLPush(result int, key string, values ...string) *Command {
-	return s.Expect("LPUSH").WithFnArgs(func(in ...string) (x bool) {
+// ExpectRPush is a wrapper for both lpush and rpush
+func (s *Server) expectLRPush(cmd string, result int, key string, values ...string) *Command {
+	return s.Expect(cmd).WithFnArgs(func(in ...string) (x bool) {
 		if len(values) == 0 {
 			if len(in) == 0 {
 				return false
@@ -89,4 +89,14 @@ func (s *Server) ExpectLPush(result int, key string, values ...string) *Command 
 		}
 		return equalArgs(in, append([]string{key}, values...))
 	}).WillReturn(result)
+}
+
+// ExpectLPush is helper for lpush command
+func (s *Server) ExpectLPush(result int, key string, values ...string) *Command {
+	return s.expectLRPush("lpush", result, key, values...)
+}
+
+// ExpectLPush is helper for lpush command
+func (s *Server) ExpectRPush(result int, key string, values ...string) *Command {
+	return s.expectLRPush("rpush", result, key, values...)
 }
