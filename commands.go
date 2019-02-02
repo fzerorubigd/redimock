@@ -1,4 +1,4 @@
-package server
+package redimock
 
 import (
 	"strings"
@@ -7,7 +7,7 @@ import (
 // TODO : I don't want to fall in `implement another redis` trap. so be careful :)
 
 // ExpectQuit try to return quit command
-func (s *Server) ExpectQuit() *Command  {
+func (s *Server) ExpectQuit() *Command {
 	return s.Expect("Quit").CloseConnection().WillReturn("OK")
 }
 
