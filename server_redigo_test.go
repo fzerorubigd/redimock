@@ -170,8 +170,8 @@ func TestRedigoBLPop(t *testing.T) {
 	s, err := NewServer(ctx, "")
 	require.NoError(t, err)
 
-	s.ExpectBLPop(0, "KEY1", "RESULT", "KEY1").Once()
-	s.ExpectBRPop(0, "KEY1", "RESULT", "KEY1").Once()
+	s.ExpectBLPop(0, "KEY1", "RESULT", true, "KEY1").Once()
+	s.ExpectBRPop(0, "KEY1", "RESULT", false, "KEY1").Once()
 
 	red, err := redis.Dial(s.Addr().Network(), s.Addr().String())
 	require.NoError(t, err)
@@ -183,9 +183,5 @@ func TestRedigoBLPop(t *testing.T) {
 	require.Equal(t, "RESULT", ret[1])
 
 	ret, err = redis.Strings(red.Do("brpop", "KEY1", "0"))
-	require.NoError(t, err)
-	require.Len(t, ret, 2)
-	require.Equal(t, "KEY1", ret[0])
-	require.Equal(t, "RESULT", ret[1])
-
+	require.Error(t, err)
 }

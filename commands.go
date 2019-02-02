@@ -102,18 +102,23 @@ func (s *Server) ExpectRPush(result int, key string, values ...string) *Command 
 	return s.expectLRPush("rpush", result, key, values...)
 }
 
-func (s *Server) expectBLRPop(cmd string, delay int, topic, resp string, keys ...string) *Command {
+func (s *Server) expectBLRPop(cmd string, delay int, topic, resp string, result bool, keys ...string) *Command {
 	return s.Expect(cmd).WithFnArgs(func(in ...string) bool {
 		return equalArgs(in, append(keys, fmt.Sprint(delay)))
-	}).WillReturn([]string{topic, resp})
+	}).WillReturnFn(func(...string) []interface{} {
+		if result {
+			return []interface{}{[]string{topic, resp}}
+		}
+		return []interface{}{nil}
+	})
 }
 
 // ExpectBLPop is the blpop command
-func (s *Server) ExpectBLPop(delay int, topic, resp string, keys ...string) *Command {
-	return s.expectBLRPop("BLPOP", delay, topic, resp, keys...)
+func (s *Server) ExpectBLPop(delay int, topic, resp string, result bool, keys ...string) *Command {
+	return s.expectBLRPop("BLPOP", delay, topic, resp, result, keys...)
 }
 
 // ExpectBRPop is the brpop command
-func (s *Server) ExpectBRPop(delay int, topic, resp string, keys ...string) *Command {
-	return s.expectBLRPop("BRPOP", delay, topic, resp, keys...)
+func (s *Server) ExpectBRPop(delay int, topic, resp string, result bool, keys ...string) *Command {
+	return s.expectBLRPop("BRPOP", delay, topic, resp, result, keys...)
 }
