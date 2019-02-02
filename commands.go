@@ -6,10 +6,26 @@ import (
 
 // TODO : I don't want to fall in `implement another redis` trap. so be careful :)
 
+// == General Commands == //
+
 // ExpectQuit try to return quit command
 func (s *Server) ExpectQuit() *Command {
 	return s.Expect("Quit").CloseConnection().WillReturn("OK")
 }
+
+// ExpectPing is the ping command
+func (s *Server) ExpectPing() *Command {
+	return s.Expect("PING").WithAnyArgs().WillReturn(func(args ...string) []interface{} {
+		if len(args) == 0 {
+			return []interface{}{"PONG"}
+		} else if len(args) == 1 {
+			return []interface{}{args[0]}
+		}
+		return []interface{}{Error("ERR wrong number of arguments for 'ping' command")}
+	})
+}
+
+// == String Commands == //
 
 // ExpectGet return a redis GET command
 func (s *Server) ExpectGet(key string, exists bool, result string) *Command {
@@ -39,17 +55,7 @@ func (s *Server) ExpectSet(key string, value string, success bool, extra ...stri
 	})
 }
 
-// ExpectPing is the ping command
-func (s *Server) ExpectPing() *Command {
-	return s.Expect("PING").WithAnyArgs().WillReturn(func(args ...string) []interface{} {
-		if len(args) == 0 {
-			return []interface{}{"PONG"}
-		} else if len(args) == 1 {
-			return []interface{}{args[0]}
-		}
-		return []interface{}{Error("ERR wrong number of arguments for 'ping' command")}
-	})
-}
+// == Hash Commands == //
 
 // ExpectHSet is the command HSET, if the update is true, then it means the key
 // was there already
@@ -68,4 +74,19 @@ func (s *Server) ExpectHGetAll(key string, ret map[string]string) *Command {
 		arr = append(arr, BulkString(i), BulkString(ret[i]))
 	}
 	return s.Expect("HGETALL").WithArgs(key).WillReturn(arr)
+}
+
+// == List Commands == //
+
+// ExpectLPush is helper for lpush command
+func (s *Server) ExpectLPush(result int, key string, values ...string) *Command {
+	return s.Expect("LPUSH").WithFnArgs(func(in ...string) (x bool) {
+		if len(values) == 0 {
+			if len(in) == 0 {
+				return false
+			}
+			return in[0] == key
+		}
+		return equalArgs(in, append([]string{key}, values...))
+	}).WillReturn(result)
 }

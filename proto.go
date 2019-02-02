@@ -194,3 +194,17 @@ func write(w io.Writer, args ...interface{}) error {
 
 	return nil
 }
+
+// equalArgs try to compare arguments
+// TODO : add more functionality, like case insensitive or order
+func equalArgs(in []string, expectd []string) bool {
+	if len(in) != len(expectd) {
+		return false
+	}
+	for i := range in {
+		if expectd[i] != in[i] {
+			return false
+		}
+	}
+	return true
+}

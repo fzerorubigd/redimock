@@ -146,3 +146,9 @@ func TestProtoWrite(t *testing.T) {
 	assert.Error(t, write(w, map[string]string{}))
 	assert.Error(t, write(failWriter(0), []int{1, 2, 3}))
 }
+
+func TestCompareArgs(t *testing.T) {
+	assert.False(t, equalArgs([]string{"a", "b", "c"}, []string{}))
+	assert.False(t, equalArgs([]string{"a", "b", "c"}, []string{"b", "c"}))
+	assert.True(t, equalArgs([]string{"a", "b", "c"}, []string{"a", "b", "c"}))
+}

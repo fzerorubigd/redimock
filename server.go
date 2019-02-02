@@ -77,6 +77,7 @@ func (s *Server) serveConn(conn io.ReadWriteCloser) {
 			if s.expectList[i].compare(args) {
 				cmd = s.expectList[i]
 				cmd.increase()
+				break
 			}
 		}
 
@@ -163,12 +164,7 @@ func (c *Command) WithArgs(args ...string) *Command {
 			return false
 		}
 
-		for i := range s {
-			if s[i] != args[i] {
-				return false
-			}
-		}
-		return true
+		return equalArgs(s, args)
 	})
 }
 

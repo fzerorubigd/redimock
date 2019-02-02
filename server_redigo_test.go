@@ -129,3 +129,31 @@ func TestRedigoListHSet(t *testing.T) {
 
 	require.Error(t, s.ExpectationsWereMet())
 }
+
+func TestRedigoLPush(t *testing.T) {
+	ctx, cnl := context.WithCancel(context.Background())
+	defer cnl()
+
+	s, err := NewServer(ctx, "")
+	require.NoError(t, err)
+
+	s.ExpectLPush(2, "LIST", "KEY1", "KEY2").Once()
+	s.ExpectLPush(5, "LIST").Once()
+
+	red, err := redis.Dial("tcp", s.Addr().String())
+	require.NoError(t, err)
+
+	ret, err := redis.Int(red.Do("lpush", "LIST", "KEY1", "KEY2"))
+	require.NoError(t, err)
+	require.Equal(t, 2, ret)
+
+	ret, err = redis.Int(red.Do("lpush", "LIST", "HI", "HOY", "BOY"))
+	require.NoError(t, err)
+	require.Equal(t, 5, ret)
+
+	require.NoError(t, s.ExpectationsWereMet())
+
+	_, err = redis.Int(red.Do("lpush"))
+	require.Error(t, err)
+	require.Error(t, s.ExpectationsWereMet())
+}
