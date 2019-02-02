@@ -1,6 +1,7 @@
 package redimock
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -99,4 +100,20 @@ func (s *Server) ExpectLPush(result int, key string, values ...string) *Command 
 // ExpectLPush is helper for lpush command
 func (s *Server) ExpectRPush(result int, key string, values ...string) *Command {
 	return s.expectLRPush("rpush", result, key, values...)
+}
+
+func (s *Server) expectBLRPop(cmd string, delay int, topic, resp string, keys ...string) *Command {
+	return s.Expect(cmd).WithFnArgs(func(in ...string) bool {
+		return equalArgs(in, append(keys, fmt.Sprint(delay)))
+	}).WillReturn([]string{topic, resp})
+}
+
+// ExpectBLPop is the blpop command
+func (s *Server) ExpectBLPop(delay int, topic, resp string, keys ...string) *Command {
+	return s.expectBLRPop("BLPOP", delay, topic, resp, keys...)
+}
+
+// ExpectBRPop is the brpop command
+func (s *Server) ExpectBRPop(delay int, topic, resp string, keys ...string) *Command {
+	return s.expectBLRPop("BRPOP", delay, topic, resp, keys...)
 }
