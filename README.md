@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/fzerorubigd/redimock/badge.svg?branch=master)](https://coveralls.io/github/fzerorubigd/redimock?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fzerorubigd/redimock)](https://goreportcard.com/report/github.com/fzerorubigd/redimock)
 
-Redimock is the Redis mocking library in TCP level. This is not a Redis clone; it's just a mock. You need to know what command should be expected and provide the output for that commands. This information is available in Redis documents, but also I am adding more helper function to cover all Redis commands easily. 
+Redimock is the Redis mocking library in TCP level. This is not a Redis clone; it's just a mock. You need to know what command should be expected and provide the output for that commands. This information is available in Redis documents, but also I am adding more helper functions to cover all Redis commands easily. 
 
 ## Usage
 
