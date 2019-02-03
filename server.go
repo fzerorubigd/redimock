@@ -57,19 +57,23 @@ func (s *Server) serve() {
 		if err != nil {
 			return
 		}
-		go s.serveConn(conn)
+		go func() {
+			// TODO : add this err to log?
+			_ = s.serveConn(conn)
+		}()
 	}
 }
 
 // ServeConn handles a connection
-func (s *Server) serveConn(conn io.ReadWriteCloser) {
+func (s *Server) serveConn(conn io.ReadWriteCloser) error {
 	defer func() {
 		_ = conn.Close()
 	}()
 	for {
 		args, err := readArray(conn)
 		if err != nil {
-			panic(err)
+			// Close the connection and return, error in client should not break the server
+			return err
 		}
 
 		var cmd *Command
@@ -84,7 +88,7 @@ func (s *Server) serveConn(conn io.ReadWriteCloser) {
 		if cmd == nil {
 			// Return error *and continue?*
 			if err := write(conn, Error("command not expected")); err != nil {
-				panic(err)
+				return err // this means the write was not successful , close the connection
 			}
 			s.lock.Lock()
 			s.unexpectedCommands = append(s.unexpectedCommands, args)
@@ -104,11 +108,12 @@ func (s *Server) serveConn(conn io.ReadWriteCloser) {
 			}
 		}
 		if err := write(conn, rsp...); err != nil {
-			panic(err)
+			// write failed, return and close the connection
+			return err
 		}
 
 		if cmd.terminate {
-			return
+			return nil
 		}
 	}
 }

@@ -57,7 +57,8 @@ func TestGoRedisExtraCall(t *testing.T) {
 		Addr: s.Addr().String(),
 	})
 
-	cl.Ping()
+	err = cl.Ping().Err()
+	require.Error(t, err)
 
 	require.Error(t, s.ExpectationsWereMet())
 }

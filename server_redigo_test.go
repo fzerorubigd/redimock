@@ -65,6 +65,22 @@ func TestRedigoStringKey(t *testing.T) {
 	require.NoError(t, s.ExpectationsWereMet())
 }
 
+func TestRedigoExtraCall(t *testing.T) {
+	ctx, cnl := context.WithCancel(context.Background())
+	defer cnl()
+
+	s, err := NewServer(ctx, "")
+	require.NoError(t, err)
+
+	cl, err := redis.Dial(s.Addr().Network(), s.Addr().String())
+	require.NoError(t, err)
+
+	_, err = cl.Do("PING")
+	require.Error(t, err)
+
+	require.Error(t, s.ExpectationsWereMet())
+}
+
 func TestRedigoPing(t *testing.T) {
 	ctx, cnl := context.WithCancel(context.Background())
 	defer cnl()

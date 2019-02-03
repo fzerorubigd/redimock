@@ -31,13 +31,13 @@ func TestNewServerErr(t *testing.T) {
 }
 
 type closer struct {
-	failOnWrite bool
+	failOnWrite error
 	*bytes.Buffer
 }
 
 func (c *closer) Write(p []byte) (n int, err error) {
-	if c.failOnWrite {
-		return 0, io.EOF
+	if c.failOnWrite != nil {
+		return 0, c.failOnWrite
 	}
 	return c.Buffer.Write(p)
 }
@@ -49,18 +49,18 @@ func (closer) Close() error {
 func TestServerServeConErr(t *testing.T) {
 	s := &Server{}
 	buf := &closer{Buffer: bytes.NewBufferString("INVALID")}
-	require.Panics(t, func() { s.serveConn(buf) })
+	require.Error(t, s.serveConn(buf))
 
-	buf = &closer{Buffer: bytes.NewBufferString("*1\r\n$4\r\nPING\r\n"), failOnWrite: true,}
-	require.Panics(t, func() { s.serveConn(buf) })
+	buf = &closer{Buffer: bytes.NewBufferString("*1\r\n$4\r\nPING\r\n"), failOnWrite: io.EOF,}
+	require.Equal(t, io.EOF, s.serveConn(buf))
 
 	s.Expect("PING").WithDelay(time.Microsecond).
 		WillReturnFn(func(s ...string) []interface{} {
 			return []interface{}{"OK"}
 		}).Any()
 
-	buf = &closer{Buffer: bytes.NewBufferString("*1\r\n$4\r\nPING\r\n"), failOnWrite: true,}
-	require.Panics(t, func() { s.serveConn(buf) })
+	buf = &closer{Buffer: bytes.NewBufferString("*1\r\n$4\r\nPING\r\n"), failOnWrite: io.ErrClosedPipe,}
+	require.Equal(t, io.ErrClosedPipe, s.serveConn(buf))
 
 }
 
