@@ -19,7 +19,7 @@ type Command struct {
 	terminate  bool
 	delay      time.Duration
 
-	lock   sync.Mutex
+	lock   sync.RWMutex
 	called int
 }
 
@@ -125,6 +125,7 @@ func (s *Server) Addr() *net.TCPAddr {
 
 // ExpectationsWereMet return nil if the all expects match or error if not
 func (s *Server) ExpectationsWereMet() error {
+	s.lock.RLock()
 	var all []error
 	for i := range s.expectList {
 		if err := s.expectList[i].error(); err != nil {
@@ -132,7 +133,6 @@ func (s *Server) ExpectationsWereMet() error {
 		}
 	}
 
-	s.lock.RLock()
 	for i := range s.unexpectedCommands {
 		all = append(all, fmt.Errorf(
 			"command %s is called but not expected",
@@ -246,6 +246,9 @@ func (c *Command) compare(input []string) bool {
 }
 
 func (c *Command) error() error {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	
 	if c.count < 0 || c.count == c.called {
 		return nil
 	}
