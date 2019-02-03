@@ -97,7 +97,7 @@ func (s *Server) ExpectLPush(result int, key string, values ...string) *Command 
 	return s.expectLRPush("lpush", result, key, values...)
 }
 
-// ExpectLPush is helper for lpush command
+// ExpectRPush is helper for lpush command
 func (s *Server) ExpectRPush(result int, key string, values ...string) *Command {
 	return s.expectLRPush("rpush", result, key, values...)
 }

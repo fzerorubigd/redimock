@@ -198,6 +198,6 @@ func TestRedigoBLPop(t *testing.T) {
 	require.Equal(t, "KEY1", ret[0])
 	require.Equal(t, "RESULT", ret[1])
 
-	ret, err = redis.Strings(red.Do("brpop", "KEY1", "0"))
+	_, err = redis.Strings(red.Do("brpop", "KEY1", "0"))
 	require.Error(t, err)
 }
